@@ -1,0 +1,72 @@
+{
+  "input_image": "sample_input.png",
+  "output_dir": "ideas/2026-03-06-image-icon-splitter-app/prototype/smoke_sample",
+  "component_count": 3,
+  "source_has_transparency": true,
+  "settings": {
+    "alpha_threshold": 10,
+    "color_tolerance": 12,
+    "edge_softness": 18,
+    "min_pixels": 25,
+    "padding": 2,
+    "merge_enclosed": true,
+    "enclosed_margin": 2,
+    "isolate_foreground": true,
+    "quality_mode": true,
+    "upscale": 2,
+    "resample": "lanczos",
+    "trim_transparent": true,
+    "alpha_clean_threshold": 2,
+    "unsharp": true,
+    "unsharp_radius": 1.0,
+    "unsharp_percent": 140,
+    "unsharp_threshold": 2
+  },
+  "components": [
+    {
+      "index": 1,
+      "file": "icon_001.png",
+      "bbox": {
+        "x_min": 18,
+        "y_min": 28,
+        "x_max": 142,
+        "y_max": 152
+      },
+      "width": 125,
+      "height": 125,
+      "pixel_count": 14197,
+      "output_width": 242,
+      "output_height": 242
+    },
+    {
+      "index": 2,
+      "file": "icon_002.png",
+      "bbox": {
+        "x_min": 158,
+        "y_min": 23,
+        "x_max": 282,
+        "y_max": 147
+      },
+      "width": 125,
+      "height": 125,
+      "pixel_count": 11497,
+      "output_width": 242,
+      "output_height": 242
+    },
+    {
+      "index": 3,
+      "file": "icon_003.png",
+      "bbox": {
+        "x_min": 283,
+        "y_min": 28,
+        "x_max": 392,
+        "y_max": 152
+      },
+      "width": 110,
+      "height": 125,
+      "pixel_count": 6306,
+      "output_width": 212,
+      "output_height": 242
+    }
+  ]
+}

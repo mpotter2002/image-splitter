@@ -1,0 +1,19 @@
+$ python3 -m py_compile split_icons.py make_two_block_code_sample.py
+
+$ python3 make_two_block_code_sample.py
+Wrote sample image: two_block_code_sample.png
+
+$ python3 split_icons.py two_block_code_sample.png --output-dir test_results/base_output
+Saved 2 icon files to test_results/base_output
+Manifest: test_results/base_output/manifest.json
+
+$ python3 split_icons.py two_block_code_sample.png --output-dir test_results/quality_output --quality-mode
+Saved 2 icon files to test_results/quality_output
+Manifest: test_results/quality_output/manifest.json
+
+$ python3 compare_base_vs_quality
+component_count_check=pass
+quality_mode_flag_check=pass
+upscale_dimension_check=pass
+base_manifest=test_results/base_output/manifest.json
+quality_manifest=test_results/quality_output/manifest.json

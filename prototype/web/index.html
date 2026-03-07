@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Image Splitter MVP</title>
+    <link rel="icon" type="image/png" href="Imagesplitterlogo.png" />
+    <style>
+      :root {
+        --bg: #121212;
+        --panel: #1a1a1a;
+        --panel-soft: #202020;
+        --surface: #262626;
+        --ink: #f2f2ef;
+        --muted: #a5a5a0;
+        --accent: #ff8a1f;
+        --accent-strong: #ffb15c;
+        --outline: rgba(255, 255, 255, 0.09);
+        --shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+
+      main {
+        width: min(1240px, calc(100vw - 32px));
+        margin: 42px auto 72px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 40px;
+        justify-items: start;
+        text-align: left;
+      }
+
+      .hero-logo {
+        width: clamp(132px, 18vw, 184px);
+        height: auto;
+        display: block;
+      }
+
+      .hero-copy {
+        display: grid;
+        gap: 10px;
+        justify-items: start;
+        max-width: 72ch;
+      }
+
+      .eyebrow {
+        font-size: 0.78rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.2rem, 4vw, 4.25rem);
+        line-height: 0.94;
+        max-width: 12ch;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 68ch;
+        color: var(--muted);
+        font-size: 0.94rem;
+        line-height: 1.45;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--outline);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .controls {
+        padding: 22px;
+        position: sticky;
+        top: 20px;
+      }
+
+      .section {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .section:last-child {
+        margin-bottom: 0;
+      }
+
+      .section-title {
+        font-size: 0.88rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.95rem;
+      }
+
+      input[type="file"],
+      input[type="number"] {
+        width: 100%;
+        border: 1px solid var(--outline);
+        border-radius: 14px;
+        padding: 11px 12px;
+        font: inherit;
+        color: var(--ink);
+        background: var(--surface);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--outline);
+        background: var(--surface);
+      }
+
+      .toggle input {
+        width: 18px;
+        height: 18px;
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      button,
+      .download-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        border-radius: 16px;
+        border: 0;
+        padding: 0 16px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+      }
+
+      button:hover,
+      .download-link:hover {
+        transform: translateY(-1px);
+      }
+
+      .primary {
+        background: var(--accent);
+        color: #141414;
+      }
+
+      .secondary {
+        background: var(--surface);
+        color: var(--ink);
+      }
+
+      .content {
+        display: grid;
+        gap: 24px;
+      }
+
+      .viewer {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        gap: 24px;
+      }
+
+      .canvas-card,
+      .results-card {
+        padding: 22px;
+      }
+
+      .canvas-shell {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        background: #161616;
+        border: 1px solid var(--outline);
+        min-height: 360px;
+        display: grid;
+        place-items: center;
+      }
+
+      .canvas-shell img {
+        display: block;
+        max-width: 100%;
+        max-height: 68vh;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .placeholder {
+        text-align: center;
+        color: var(--muted);
+        max-width: 32ch;
+        line-height: 1.5;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+      }
+
+      .stat {
+        min-width: 0;
+        padding: 14px;
+        border-radius: 16px;
+        background: var(--panel-soft);
+        border: 1px solid var(--outline);
+      }
+
+      .stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 1.35rem;
+        line-height: 1.05;
+      }
+
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+      }
+
+      .thumb {
+        padding: 10px;
+        border-radius: 16px;
+        background: var(--panel-soft);
+        border: 1px solid var(--outline);
+      }
+
+      .thumb img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: contain;
+        display: block;
+        background: #141414;
+        border-radius: 12px;
+      }
+
+      .thumb span {
+        display: block;
+        margin-top: 8px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .error {
+        color: #ff8c7a;
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .layout,
+        .viewer {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-copy {
+          justify-items: center;
+        }
+
+        .controls {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <img class="hero-logo" src="Imagesplitterlogo.png" alt="Image Splitter logo" />
+        <div class="hero-copy">
+          <div class="eyebrow">Local Prototype</div>
+          <h1>Image Splitter</h1>
+          <p>
+            Upload an image, preview detected object bounds, then export isolated PNGs plus a manifest.
+            This browser MVP runs against the same local quality pipeline as the CLI.
+          </p>
+        </div>
+      </section>
+
+      <section class="layout">
+        <aside class="panel controls">
+          <div class="section">
+            <div class="section-title">Input</div>
+            <label>
+              Image file
+              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+            </label>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Detection</div>
+            <div class="grid">
+              <label>
+                Color tolerance
+                <input id="colorTolerance" type="number" min="0" max="255" value="12" />
+              </label>
+              <label>
+                Edge softness
+                <input id="edgeSoftness" type="number" min="0" max="255" value="18" />
+              </label>
+              <label>
+                Min pixels
+                <input id="minPixels" type="number" min="1" value="25" />
+              </label>
+              <label>
+                Padding
+                <input id="padding" type="number" min="0" value="2" />
+              </label>
+            </div>
+            <label class="toggle">
+              <input id="mergeEnclosed" type="checkbox" checked />
+              <span>Merge enclosed inner strokes into outer shapes</span>
+            </label>
+            <label class="toggle">
+              <input id="isolateForeground" type="checkbox" checked />
+              <span>Make detected background transparent in outputs</span>
+            </label>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Output Quality</div>
+            <label class="toggle">
+              <input id="qualityMode" type="checkbox" checked />
+              <span>Quality mode: trim, upscale, alpha cleanup, sharpen</span>
+            </label>
+            <div class="grid">
+              <label>
+                Upscale
+                <input id="upscale" type="number" min="1" max="6" value="2" />
+              </label>
+              <label>
+                Alpha cleanup
+                <input id="alphaCleanThreshold" type="number" min="0" max="255" value="2" />
+              </label>
+            </div>
+          </div>
+
+          <div class="section actions">
+            <button class="secondary" id="previewButton">Preview Bounds</button>
+            <button class="primary" id="splitButton">Split And Prepare Download</button>
+            <a class="download-link secondary" id="downloadLink" hidden>Download Zip</a>
+          </div>
+          <div class="status" id="statusText"></div>
+        </aside>
+
+        <div class="content">
+          <section class="viewer">
+            <article class="panel canvas-card">
+              <div class="section-title">Original + Detection Overlay</div>
+              <div class="canvas-shell" id="canvasShell">
+                <div class="placeholder" id="placeholder">
+                  Drop in a source image, then preview detections to verify bounds before exporting.
+                </div>
+                <img id="previewImage" hidden alt="Preview" />
+                <svg class="overlay" id="overlay"></svg>
+              </div>
+            </article>
+
+            <article class="panel results-card">
+              <div class="section-title">Session Snapshot</div>
+              <div class="stats">
+                <div class="stat"><span>Detected</span><strong id="countStat">0</strong></div>
+                <div class="stat"><span>Image Size</span><strong id="sizeStat">-</strong></div>
+                <div class="stat"><span>Background</span><strong id="alphaStat">-</strong></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel results-card">
+            <div class="section-title">Split Output Preview</div>
+            <div class="results-grid" id="resultsGrid"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const STORAGE_KEY = "image-splitter-mvp-settings";
+      const elements = {
+        fileInput: document.getElementById("fileInput"),
+        colorTolerance: document.getElementById("colorTolerance"),
+        edgeSoftness: document.getElementById("edgeSoftness"),
+        minPixels: document.getElementById("minPixels"),
+        padding: document.getElementById("padding"),
+        mergeEnclosed: document.getElementById("mergeEnclosed"),
+        isolateForeground: document.getElementById("isolateForeground"),
+        qualityMode: document.getElementById("qualityMode"),
+        upscale: document.getElementById("upscale"),
+        alphaCleanThreshold: document.getElementById("alphaCleanThreshold"),
+        previewButton: document.getElementById("previewButton"),
+        splitButton: document.getElementById("splitButton"),
+        downloadLink: document.getElementById("downloadLink"),
+        statusText: document.getElementById("statusText"),
+        previewImage: document.getElementById("previewImage"),
+        overlay: document.getElementById("overlay"),
+        placeholder: document.getElementById("placeholder"),
+        countStat: document.getElementById("countStat"),
+        sizeStat: document.getElementById("sizeStat"),
+        alphaStat: document.getElementById("alphaStat"),
+        resultsGrid: document.getElementById("resultsGrid"),
+      };
+
+      let currentFile = null;
+      let currentImageDataUrl = "";
+      let currentPreview = null;
+
+      function saveSettings() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(readSettings()));
+      }
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          for (const [key, value] of Object.entries(parsed)) {
+            if (!(key in elements)) continue;
+            if (typeof elements[key].checked === "boolean") {
+              elements[key].checked = Boolean(value);
+            } else {
+              elements[key].value = value;
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load settings", error);
+        }
+      }
+
+      function readSettings() {
+        return {
+          color_tolerance: Number(elements.colorTolerance.value),
+          edge_softness: Number(elements.edgeSoftness.value),
+          min_pixels: Number(elements.minPixels.value),
+          padding: Number(elements.padding.value),
+          merge_enclosed: elements.mergeEnclosed.checked,
+          isolate_foreground: elements.isolateForeground.checked,
+          quality_mode: elements.qualityMode.checked,
+          upscale: Number(elements.upscale.value),
+          alpha_clean_threshold: Number(elements.alphaCleanThreshold.value),
+        };
+      }
+
+      function setStatus(message, isError = false) {
+        elements.statusText.textContent = message;
+        elements.statusText.classList.toggle("error", isError);
+      }
+
+      function drawOverlay(preview) {
+        elements.overlay.innerHTML = "";
+        if (!preview) return;
+
+        const bounds = elements.previewImage.getBoundingClientRect();
+        elements.overlay.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
+        elements.overlay.setAttribute("width", bounds.width);
+        elements.overlay.setAttribute("height", bounds.height);
+
+        const xScale = bounds.width / preview.image_width;
+        const yScale = bounds.height / preview.image_height;
+
+        preview.components.forEach((component, index) => {
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          const width = (component.bbox.x_max - component.bbox.x_min + 1) * xScale;
+          const height = (component.bbox.y_max - component.bbox.y_min + 1) * yScale;
+          const x = component.bbox.x_min * xScale;
+          const y = component.bbox.y_min * yScale;
+
+          rect.setAttribute("x", x);
+          rect.setAttribute("y", y);
+          rect.setAttribute("width", width);
+          rect.setAttribute("height", height);
+          rect.setAttribute("rx", 12);
+          rect.setAttribute("fill", "rgba(203, 95, 54, 0.12)");
+          rect.setAttribute("stroke", "rgba(203, 95, 54, 0.92)");
+          rect.setAttribute("stroke-width", "2");
+
+          label.setAttribute("x", x + 10);
+          label.setAttribute("y", y + 22);
+          label.setAttribute("fill", "#9e3d1d");
+          label.setAttribute("font-size", "15");
+          label.setAttribute("font-weight", "700");
+          label.textContent = String(index + 1);
+
+          elements.overlay.append(rect, label);
+        });
+      }
+
+      async function fileToDataUrl(file) {
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function postJson(url, payload) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed: ${response.status}`);
+        }
+        return data;
+      }
+
+      function requireFile() {
+        if (!currentFile) {
+          throw new Error("Choose an image first.");
+        }
+      }
+
+      function showImage(dataUrl) {
+        elements.previewImage.src = dataUrl;
+        elements.previewImage.hidden = false;
+        elements.placeholder.hidden = true;
+      }
+
+      function updateStats(preview) {
+        elements.countStat.textContent = String(preview.component_count);
+        elements.sizeStat.textContent = `${preview.image_width}×${preview.image_height}`;
+        elements.alphaStat.textContent = preview.source_has_transparency ? "Source alpha" : "Isolated";
+      }
+
+      function renderResults(previews) {
+        elements.resultsGrid.innerHTML = "";
+        previews.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "thumb";
+          card.innerHTML = `
+            <img src="${item.data_url}" alt="${item.file}" />
+            <span>${item.file}</span>
+          `;
+          elements.resultsGrid.appendChild(card);
+        });
+      }
+
+      async function ensureImageData() {
+        if (!currentImageDataUrl && currentFile) {
+          currentImageDataUrl = await fileToDataUrl(currentFile);
+        }
+      }
+
+      async function runPreview() {
+        requireFile();
+        await ensureImageData();
+        saveSettings();
+        setStatus("Analyzing image and detecting components...");
+        const preview = await postJson("/api/preview", {
+          filename: currentFile.name,
+          image_data_url: currentImageDataUrl,
+          settings: readSettings(),
+        });
+        currentPreview = preview;
+        showImage(currentImageDataUrl);
+        updateStats(preview);
+        requestAnimationFrame(() => drawOverlay(preview));
+        setStatus(`Detected ${preview.component_count} component${preview.component_count === 1 ? "" : "s"}.`);
+      }
+
+      async function runSplit() {
+        requireFile();
+        await ensureImageData();
+        saveSettings();
+        setStatus("Rendering split outputs and preparing download...");
+        const response = await postJson("/api/split", {
+          filename: currentFile.name,
+          image_data_url: currentImageDataUrl,
+          settings: readSettings(),
+        });
+        renderResults(response.previews);
+        elements.downloadLink.href = response.download_url;
+        elements.downloadLink.download = response.download_name;
+        elements.downloadLink.hidden = false;
+        if (response.manifest) {
+          currentPreview = {
+            component_count: response.manifest.component_count,
+            image_width: currentPreview?.image_width || 0,
+            image_height: currentPreview?.image_height || 0,
+            source_has_transparency: response.manifest.source_has_transparency,
+            components: response.manifest.components,
+          };
+          if (currentPreview.image_width && currentPreview.image_height) {
+            requestAnimationFrame(() => drawOverlay(currentPreview));
+          }
+        }
+        setStatus(`Prepared ${response.manifest.component_count} PNG files and zip download.`);
+      }
+
+      elements.fileInput.addEventListener("change", async (event) => {
+        currentFile = event.target.files[0] || null;
+        currentImageDataUrl = "";
+        currentPreview = null;
+        elements.downloadLink.hidden = true;
+        elements.resultsGrid.innerHTML = "";
+        elements.overlay.innerHTML = "";
+        elements.countStat.textContent = "0";
+        elements.sizeStat.textContent = "-";
+        elements.alphaStat.textContent = "-";
+        if (!currentFile) {
+          elements.previewImage.hidden = true;
+          elements.placeholder.hidden = false;
+          setStatus("");
+          return;
+        }
+        currentImageDataUrl = await fileToDataUrl(currentFile);
+        showImage(currentImageDataUrl);
+        setStatus(`${currentFile.name} loaded. Preview bounds when ready.`);
+      });
+
+      elements.previewButton.addEventListener("click", async () => {
+        try {
+          await runPreview();
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      });
+
+      elements.splitButton.addEventListener("click", async () => {
+        try {
+          if (!currentPreview) {
+            await runPreview();
+          }
+          await runSplit();
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (currentPreview && !elements.previewImage.hidden) {
+          drawOverlay(currentPreview);
+        }
+      });
+
+      [
+        elements.colorTolerance,
+        elements.edgeSoftness,
+        elements.minPixels,
+        elements.padding,
+        elements.mergeEnclosed,
+        elements.isolateForeground,
+        elements.qualityMode,
+        elements.upscale,
+        elements.alphaCleanThreshold,
+      ].forEach((input) => {
+        input.addEventListener("change", saveSettings);
+      });
+
+      loadSettings();
+    </script>
+  </body>
+</html>

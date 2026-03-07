@@ -1,0 +1,11 @@
+$ python3 make_sample_image.py
+Wrote sample image: sample_input.png
+
+$ python3 split_icons.py sample_input.png --output-dir test_results/sample_three_output
+Saved 3 icon files to test_results/sample_three_output
+Manifest: test_results/sample_three_output/manifest.json
+
+$ python3 verify_three_components
+component_count_check=pass
+output_files_check=pass
+manifest=test_results/sample_three_output/manifest.json

@@ -1,0 +1,50 @@
+{
+  "input_image": "two_block_code_sample.png",
+  "output_dir": "test_results/quality_output",
+  "component_count": 2,
+  "settings": {
+    "alpha_threshold": 10,
+    "color_tolerance": 12,
+    "min_pixels": 25,
+    "padding": 2,
+    "merge_enclosed": true,
+    "enclosed_margin": 2,
+    "quality_mode": true,
+    "upscale": 2,
+    "resample": "lanczos",
+    "trim_transparent": true,
+    "alpha_clean_threshold": 2,
+    "unsharp": true,
+    "unsharp_radius": 1.0,
+    "unsharp_percent": 140,
+    "unsharp_threshold": 2
+  },
+  "components": [
+    {
+      "index": 1,
+      "file": "icon_001.png",
+      "bbox": {
+        "x_min": 113,
+        "y_min": 176,
+        "x_max": 442,
+        "y_max": 505
+      },
+      "width": 330,
+      "height": 330,
+      "pixel_count": 105580
+    },
+    {
+      "index": 2,
+      "file": "icon_002.png",
+      "bbox": {
+        "x_min": 578,
+        "y_min": 176,
+        "x_max": 917,
+        "y_max": 505
+      },
+      "width": 340,
+      "height": 330,
+      "pixel_count": 14453
+    }
+  ]
+}
