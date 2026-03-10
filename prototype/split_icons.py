@@ -84,8 +84,8 @@ DEFAULT_SETTINGS: Dict[str, object] = {
     "trim_transparent": False,
     "alpha_clean_threshold": 0,
     "unsharp": False,
-    "unsharp_radius": 1.0,
-    "unsharp_percent": 140,
+    "unsharp_radius": 1.1,
+    "unsharp_percent": 170,
     "unsharp_threshold": 2,
 }
 
@@ -284,9 +284,9 @@ def normalize_settings(overrides: Dict[str, object] | None = None) -> Dict[str, 
     settings["unsharp_threshold"] = max(0, int(settings["unsharp_threshold"]))
 
     if settings["quality_mode"]:
-        settings["upscale"] = max(int(settings["upscale"]), 2)
+        settings["upscale"] = max(int(settings["upscale"]), 3)
         settings["trim_transparent"] = True
-        settings["alpha_clean_threshold"] = max(int(settings["alpha_clean_threshold"]), 2)
+        settings["alpha_clean_threshold"] = max(int(settings["alpha_clean_threshold"]), 3)
         settings["unsharp"] = True
 
     return settings
