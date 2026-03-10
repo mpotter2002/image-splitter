@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import json
+import os
 import secrets
+import tempfile
 import time
 import zipfile
+from collections import OrderedDict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
@@ -20,25 +24,81 @@ APP_ROOT = Path(__file__).resolve().parent
 WEB_ROOT = APP_ROOT / "web"
 INDEX_HTML = WEB_ROOT / "index.html"
 DOWNLOAD_TTL_SECONDS = 30 * 60
-DOWNLOADS: dict[str, dict[str, object]] = {}
+MAX_UPLOAD_BYTES = int(os.environ.get("IMAGE_SPLITTER_MAX_UPLOAD_BYTES", 12 * 1024 * 1024))
+MAX_REQUEST_BYTES = int(os.environ.get("IMAGE_SPLITTER_MAX_REQUEST_BYTES", 18 * 1024 * 1024))
+MAX_STORED_DOWNLOADS = int(os.environ.get("IMAGE_SPLITTER_MAX_STORED_DOWNLOADS", 24))
+DOWNLOAD_ROOT = Path(
+    os.environ.get("IMAGE_SPLITTER_DOWNLOAD_DIR", tempfile.gettempdir())
+) / "image-splitter-downloads"
+ALLOWED_IMAGE_MIME_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+}
+DOWNLOADS: "OrderedDict[str, dict[str, object]]" = OrderedDict()
+
+
+class RequestError(Exception):
+    def __init__(self, public_message: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
+        super().__init__(public_message)
+        self.public_message = public_message
+        self.status = status
 
 
 def decode_data_url(data_url: str) -> bytes:
-    if "," not in data_url:
-        raise ValueError("Expected data URL payload.")
-    _, encoded = data_url.split(",", 1)
-    return base64.b64decode(encoded)
+    if "," not in data_url or not data_url.startswith("data:"):
+        raise RequestError("Upload a valid PNG, JPG, WebP, or GIF image.")
+
+    header, encoded = data_url.split(",", 1)
+    mime_type = header[5:].split(";", 1)[0].lower()
+    if mime_type not in ALLOWED_IMAGE_MIME_TYPES:
+        raise RequestError("Only PNG, JPG, WebP, and GIF files are supported.")
+
+    try:
+        decoded = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise RequestError("Upload a valid PNG, JPG, WebP, or GIF image.") from exc
+
+    if len(decoded) > MAX_UPLOAD_BYTES:
+        raise RequestError(
+            f"Image is too large. Keep uploads under {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+            status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+        )
+    return decoded
 
 
 def png_data_url(image_bytes: bytes) -> str:
     return f"data:image/png;base64,{base64.b64encode(image_bytes).decode('ascii')}"
 
 
+def public_error_message(exc: Exception) -> str:
+    if isinstance(exc, RequestError):
+        return exc.public_message
+
+    message = str(exc).lower()
+    if "cannot identify image file" in message:
+        return "Upload a valid PNG, JPG, WebP, or GIF image."
+    if "decompressed data too large" in message:
+        return "Image is too complex to process safely. Try a smaller file."
+    return "Something went wrong while processing the image. Please try a different file or adjust the settings."
+
+
 def cleanup_downloads() -> None:
     cutoff = time.time() - DOWNLOAD_TTL_SECONDS
     expired = [token for token, payload in DOWNLOADS.items() if float(payload["created_at"]) < cutoff]
     for token in expired:
-        DOWNLOADS.pop(token, None)
+        payload = DOWNLOADS.pop(token, None)
+        if payload:
+            path = payload.get("path")
+            if isinstance(path, Path):
+                path.unlink(missing_ok=True)
+
+    while len(DOWNLOADS) > MAX_STORED_DOWNLOADS:
+        _, payload = DOWNLOADS.popitem(last=False)
+        path = payload.get("path")
+        if isinstance(path, Path):
+            path.unlink(missing_ok=True)
 
 
 def make_zip_blob(manifest: dict, rendered_crops: list) -> bytes:
@@ -50,6 +110,27 @@ def make_zip_blob(manifest: dict, rendered_crops: list) -> bytes:
     return buffer.getvalue()
 
 
+def persist_download(blob: bytes, filename: str) -> str:
+    cleanup_downloads()
+    DOWNLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+
+    token = secrets.token_urlsafe(12)
+    zip_path = DOWNLOAD_ROOT / f"{token}.zip"
+    zip_path.write_bytes(blob)
+    DOWNLOADS[token] = {
+        "path": zip_path,
+        "filename": filename,
+        "created_at": time.time(),
+        "size_bytes": len(blob),
+    }
+    return token
+
+
+class ImageSplitterHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 class ImageSplitterHandler(BaseHTTPRequestHandler):
     server_version = "ImageSplitterHTTP/0.1"
 
@@ -57,6 +138,9 @@ class ImageSplitterHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path in {"/", "/index.html"}:
             self.serve_index()
+            return
+        if parsed.path == "/healthz":
+            self.write_json({"ok": True, "status": "ready"})
             return
         if self.serve_static_file(parsed.path):
             return
@@ -126,10 +210,15 @@ class ImageSplitterHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, "Download expired or missing")
             return
 
-        blob = payload["blob"]
-        assert isinstance(blob, bytes)
+        path = payload.get("path")
+        if not isinstance(path, Path) or not path.is_file():
+            DOWNLOADS.pop(token, None)
+            self.send_error(HTTPStatus.NOT_FOUND, "Download expired or missing")
+            return
+
         filename = payload["filename"]
         assert isinstance(filename, str)
+        blob = path.read_bytes()
 
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "application/zip")
@@ -146,7 +235,8 @@ class ImageSplitterHandler(BaseHTTPRequestHandler):
             settings = payload.get("settings") or {}
             manifest, _, analysis = split_image_bytes(image_bytes, filename, "browser_preview", settings)
         except Exception as exc:
-            self.write_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            status = exc.status if isinstance(exc, RequestError) else HTTPStatus.BAD_REQUEST
+            self.write_json({"error": public_error_message(exc)}, status=status)
             return
 
         self.write_json(
@@ -168,19 +258,14 @@ class ImageSplitterHandler(BaseHTTPRequestHandler):
             settings = payload.get("settings") or {}
             manifest, rendered_crops, _ = split_image_bytes(image_bytes, filename, "browser_output", settings)
         except Exception as exc:
-            self.write_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            status = exc.status if isinstance(exc, RequestError) else HTTPStatus.BAD_REQUEST
+            self.write_json({"error": public_error_message(exc)}, status=status)
             return
 
         zip_blob = make_zip_blob(manifest, rendered_crops)
-        cleanup_downloads()
-        token = secrets.token_urlsafe(12)
         stem = Path(filename).stem or "split-icons"
         download_name = f"{stem}-split-icons.zip"
-        DOWNLOADS[token] = {
-            "blob": zip_blob,
-            "filename": download_name,
-            "created_at": time.time(),
-        }
+        token = persist_download(zip_blob, download_name)
 
         previews = []
         for rendered in rendered_crops:
@@ -204,15 +289,30 @@ class ImageSplitterHandler(BaseHTTPRequestHandler):
         )
 
     def read_json_payload(self) -> dict:
+        content_type = self.headers.get("Content-Type", "")
+        if "application/json" not in content_type.lower():
+            raise RequestError("Send requests as JSON.", status=HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
+
         content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length <= 0:
+            raise RequestError("Request body is empty.")
+        if content_length > MAX_REQUEST_BYTES:
+            raise RequestError(
+                f"Request is too large. Keep uploads under {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+            )
         body = self.rfile.read(content_length)
-        return json.loads(body.decode("utf-8"))
+        try:
+            return json.loads(body.decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise RequestError("Request body must be valid JSON.") from exc
 
     def write_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         encoded = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(encoded)
 
@@ -226,7 +326,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    server = ThreadingHTTPServer((args.host, args.port), ImageSplitterHandler)
+    server = ImageSplitterHTTPServer((args.host, args.port), ImageSplitterHandler)
     print(f"Serving image splitter UI at http://{args.host}:{args.port}")
     try:
         server.serve_forever()
@@ -234,6 +334,7 @@ def main() -> None:
         pass
     finally:
         server.server_close()
+        cleanup_downloads()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+.DS_Store
+.venv
+__pycache__/
+*.pyc
+test_results/
+smoke_blocks/
+smoke_sample/
+out_*/

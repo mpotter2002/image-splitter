@@ -3,8 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Image Splitter MVP</title>
+    <title>Image Splitter</title>
     <link rel="icon" type="image/png" href="Imagesplitterlogo.png" />
+    <script>
+      window.va =
+        window.va ||
+        function () {
+          (window.vaq = window.vaq || []).push(arguments);
+        };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
     <style>
       :root {
         --bg: #121212;
@@ -32,8 +40,9 @@
       }
 
       main {
-        width: min(1240px, calc(100vw - 32px));
-        margin: 42px auto 72px;
+        width: 100%;
+        margin: 42px 0 72px;
+        padding: 0 50px;
       }
 
       .hero {
@@ -83,8 +92,8 @@
 
       .layout {
         display: grid;
-        grid-template-columns: 340px minmax(0, 1fr);
-        gap: 28px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
         align-items: start;
       }
 
@@ -97,18 +106,16 @@
 
       .controls {
         padding: 22px;
-        position: sticky;
-        top: 20px;
+        display: grid;
+        grid-template-columns: minmax(250px, 1.1fr) minmax(360px, 1.5fr) minmax(240px, 0.95fr);
+        gap: 16px;
+        align-items: start;
       }
 
       .section {
         display: grid;
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-
-      .section:last-child {
-        margin-bottom: 0;
+        gap: 10px;
+        min-width: 0;
       }
 
       .section-title {
@@ -125,6 +132,21 @@
         font-size: 0.95rem;
       }
 
+      .field-label,
+      .toggle-copy {
+        display: inline-grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .helper-text {
+        margin: -4px 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
       input[type="file"],
       input[type="number"] {
         width: 100%;
@@ -139,14 +161,14 @@
       .grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
+        gap: 10px;
       }
 
       .toggle {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 10px 12px;
+        padding: 9px 12px;
         border-radius: 14px;
         border: 1px solid var(--outline);
         background: var(--surface);
@@ -157,9 +179,139 @@
         height: 18px;
       }
 
+      .info-chip {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 177, 92, 0.45);
+        color: var(--accent-strong);
+        background: rgba(255, 138, 31, 0.12);
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: help;
+      }
+
+      .info-chip::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 10px);
+        transform: translateX(-50%);
+        width: min(240px, 70vw);
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--outline);
+        background: #0f0f0f;
+        color: var(--ink);
+        box-shadow: var(--shadow);
+        font-size: 0.8rem;
+        line-height: 1.4;
+        text-align: left;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+      }
+
+      .info-chip:hover::after,
+      .info-chip:focus-visible::after {
+        opacity: 1;
+      }
+
       .actions {
         display: grid;
         gap: 10px;
+      }
+
+      .actions-section {
+        align-self: stretch;
+      }
+
+      .actions-section .actions {
+        align-content: start;
+      }
+
+      .advanced-section {
+        grid-column: 1 / -1;
+        padding-top: 2px;
+      }
+
+      .section-intro {
+        margin: -6px 0 4px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      .advanced-panel {
+        border: 1px solid var(--outline);
+        border-radius: 16px;
+        background: var(--panel-soft);
+        overflow: hidden;
+      }
+
+      .advanced-panel summary {
+        list-style: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 16px;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .advanced-summary-copy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .advanced-panel summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .advanced-panel summary .advanced-summary-subtitle {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 500;
+      }
+
+      .advanced-arrow {
+        color: var(--accent-strong);
+        font-size: 1rem;
+        line-height: 1;
+        transition: transform 140ms ease;
+      }
+
+      .advanced-panel[open] .advanced-arrow {
+        transform: rotate(90deg);
+      }
+
+      .advanced-content {
+        padding: 0 16px 16px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .advanced-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .advanced-group {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .advanced-group .section-title {
+        margin-bottom: 2px;
+        font-size: 0.78rem;
       }
 
       button,
@@ -193,6 +345,18 @@
         color: var(--ink);
       }
 
+      button:disabled,
+      input:disabled,
+      .download-link[aria-disabled="true"] {
+        opacity: 0.58;
+        cursor: not-allowed;
+      }
+
+      button:disabled:hover,
+      .download-link[aria-disabled="true"]:hover {
+        transform: none;
+      }
+
       .content {
         display: grid;
         gap: 24px;
@@ -218,17 +382,35 @@
         min-height: 360px;
         display: grid;
         place-items: center;
+        padding: 18px;
+      }
+
+      .preview-stage {
+        position: absolute;
+        inset: 18px;
+        display: grid;
+        place-items: center;
+      }
+
+      .preview-frame {
+        position: relative;
+        display: inline-block;
+        line-height: 0;
+        max-width: 100%;
       }
 
       .canvas-shell img {
         display: block;
-        max-width: 100%;
+        max-width: min(100%, 1000px);
         max-height: 68vh;
       }
 
       .overlay {
         position: absolute;
         inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
         pointer-events: none;
       }
 
@@ -300,28 +482,62 @@
       }
 
       .status {
-        min-height: 1.5rem;
+        min-height: 2.9rem;
         color: var(--muted);
         font-size: 0.95rem;
+        line-height: 1.45;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid transparent;
       }
 
       .error {
         color: #ff8c7a;
+        border-color: rgba(255, 140, 122, 0.32);
+        background: rgba(255, 140, 122, 0.08);
+      }
+
+      .status.busy {
+        color: var(--ink);
+        border-color: rgba(255, 177, 92, 0.18);
+        background: rgba(255, 138, 31, 0.08);
+      }
+
+      .status.success {
+        color: #d7e9d0;
+        border-color: rgba(143, 211, 153, 0.22);
+        background: rgba(98, 178, 117, 0.1);
+      }
+
+      .results-empty {
+        padding: 16px 18px;
+        border-radius: 16px;
+        border: 1px dashed var(--outline);
+        color: var(--muted);
+        line-height: 1.5;
       }
 
       @media (max-width: 980px) {
+        main {
+          padding: 0 20px;
+        }
+
         .hero,
-        .layout,
         .viewer {
+          grid-template-columns: 1fr;
+        }
+
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .advanced-grid {
           grid-template-columns: 1fr;
         }
 
         .hero-copy {
           justify-items: center;
-        }
-
-        .controls {
-          position: static;
         }
       }
     </style>
@@ -334,76 +550,196 @@
           <div class="eyebrow">Local Prototype</div>
           <h1>Image Splitter</h1>
           <p>
-            Upload an image, preview detected object bounds, then export isolated PNGs plus a manifest.
-            This browser MVP runs against the same local quality pipeline as the CLI.
+            Split separate icons, logos, or marks from one image. Review the detected bounds, then export clean PNGs and a manifest in one download.
           </p>
         </div>
       </section>
 
       <section class="layout">
         <aside class="panel controls">
-          <div class="section">
+          <div class="section input-section">
             <div class="section-title">Input</div>
+            <p class="section-intro">Choose a PNG, JPG, WebP, or GIF. Best results come from images where each icon is visually separated from the others.</p>
             <label>
               Image file
               <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
             </label>
+            <p class="helper-text">Uploads are limited to 12 MB per image.</p>
           </div>
 
-          <div class="section">
-            <div class="section-title">Detection</div>
+          <div class="section detection-section">
+            <div class="section-title">Quick Tune</div>
+            <p class="section-intro">Adjust the biggest outcome drivers here, then open Advanced if you need finer cleanup controls.</p>
             <div class="grid">
               <label>
-                Color tolerance
+                <span class="field-label">
+                  Background sensitivity
+                  <span
+                    class="info-chip"
+                    tabindex="0"
+                    role="note"
+                    aria-label="Help for background sensitivity"
+                    data-tip="Controls how different a pixel must be from the background before it counts as part of an icon. Increase it when the background has noise or shading."
+                    >i</span
+                  >
+                </span>
                 <input id="colorTolerance" type="number" min="0" max="255" value="12" />
               </label>
-              <label>
-                Edge softness
-                <input id="edgeSoftness" type="number" min="0" max="255" value="18" />
-              </label>
-              <label>
-                Min pixels
-                <input id="minPixels" type="number" min="1" value="25" />
-              </label>
-              <label>
-                Padding
-                <input id="padding" type="number" min="0" value="2" />
-              </label>
             </div>
-            <label class="toggle">
-              <input id="mergeEnclosed" type="checkbox" checked />
-              <span>Merge enclosed inner strokes into outer shapes</span>
-            </label>
             <label class="toggle">
               <input id="isolateForeground" type="checkbox" checked />
-              <span>Make detected background transparent in outputs</span>
+              <span class="toggle-copy">
+                Remove the background in exports
+                <span
+                  class="info-chip"
+                  tabindex="0"
+                  role="note"
+                  aria-label="Help for background removal"
+                  data-tip="Exports each detected item on transparency instead of keeping the original background color behind it."
+                  >i</span
+                >
+              </span>
+            </label>
+            <label class="toggle">
+              <input id="qualityMode" type="checkbox" checked />
+              <span class="toggle-copy">
+                Enhance exports automatically
+                <span
+                  class="info-chip"
+                  tabindex="0"
+                  role="note"
+                  aria-label="Help for quality mode"
+                  data-tip="Turns on the recommended cleanup steps for sharper PNG exports: trim transparent edges, upscale small crops, clean faint alpha haze, and sharpen details."
+                  >i</span
+                >
+              </span>
             </label>
           </div>
 
-          <div class="section">
-            <div class="section-title">Output Quality</div>
-            <label class="toggle">
-              <input id="qualityMode" type="checkbox" checked />
-              <span>Quality mode: trim, upscale, alpha cleanup, sharpen</span>
-            </label>
-            <div class="grid">
-              <label>
-                Upscale
-                <input id="upscale" type="number" min="1" max="6" value="2" />
-              </label>
-              <label>
-                Alpha cleanup
-                <input id="alphaCleanThreshold" type="number" min="0" max="255" value="2" />
-              </label>
+          <div class="section actions-section">
+            <div class="section-title">Actions</div>
+            <p class="section-intro">Preview first to check the boxes, then generate the final PNG set when everything looks right.</p>
+            <div class="actions">
+              <button class="secondary" id="previewButton">Preview Bounds</button>
+              <button class="primary" id="splitButton">Split And Prepare Download</button>
+              <a class="download-link secondary" id="downloadLink" hidden>Download Zip</a>
+            </div>
+            <div class="status" id="statusText" role="status" aria-live="polite" aria-atomic="true">
+              Choose an image to begin.
             </div>
           </div>
 
-          <div class="section actions">
-            <button class="secondary" id="previewButton">Preview Bounds</button>
-            <button class="primary" id="splitButton">Split And Prepare Download</button>
-            <a class="download-link secondary" id="downloadLink" hidden>Download Zip</a>
+          <div class="section advanced-section">
+            <details class="advanced-panel">
+              <summary>
+                <span class="advanced-summary-copy">
+                  <span>Advanced controls</span>
+                  <span class="advanced-summary-subtitle">Cleanup, grouping, and export fine-tuning</span>
+                </span>
+                <span class="advanced-arrow" aria-hidden="true">></span>
+              </summary>
+              <div class="advanced-content">
+                <div class="advanced-grid">
+                  <div class="advanced-group">
+                    <div class="section-title">Detection</div>
+                    <label>
+                      <span class="field-label">
+                        Edge feathering
+                        <span
+                          class="info-chip"
+                          tabindex="0"
+                          role="note"
+                          aria-label="Help for edge feathering"
+                          data-tip="Softens the transition around extracted edges. Increase it if cutouts look jagged or have harsh halos."
+                          >i</span
+                        >
+                      </span>
+                      <input id="edgeSoftness" type="number" min="0" max="255" value="18" />
+                    </label>
+                    <label>
+                      <span class="field-label">
+                        Small speck filter
+                        <span
+                          class="info-chip"
+                          tabindex="0"
+                          role="note"
+                          aria-label="Help for small speck filter"
+                          data-tip="Ignores tiny disconnected blobs. Raise it to remove dust or noise; lower it if small icons are being skipped."
+                          >i</span
+                        >
+                      </span>
+                      <input id="minPixels" type="number" min="1" value="25" />
+                    </label>
+                    <label>
+                      <span class="field-label">
+                        Crop padding
+                        <span
+                          class="info-chip"
+                          tabindex="0"
+                          role="note"
+                          aria-label="Help for crop padding"
+                          data-tip="Adds breathing room around each exported icon so strokes do not sit flush against the edge."
+                          >i</span
+                        >
+                      </span>
+                      <input id="padding" type="number" min="0" value="2" />
+                    </label>
+                  </div>
+
+                  <div class="advanced-group">
+                    <div class="section-title">Shape Grouping</div>
+                    <label class="toggle">
+                      <input id="mergeEnclosed" type="checkbox" checked />
+                      <span class="toggle-copy">
+                        Keep cutouts with the parent shape
+                        <span
+                          class="info-chip"
+                          tabindex="0"
+                          role="note"
+                          aria-label="Help for keeping cutouts with the parent shape"
+                          data-tip="Useful for outlined icons or code blocks with inner details. When enabled, interior marks that belong to the same outer shape are exported together."
+                          >i</span
+                        >
+                      </span>
+                    </label>
+                    <p class="helper-text">Best for outlines, rings, and icons with holes or interior marks.</p>
+                  </div>
+
+                  <div class="advanced-group">
+                    <div class="section-title">Output Quality</div>
+                    <label>
+                      <span class="field-label">
+                        Export scale
+                        <span
+                          class="info-chip"
+                          tabindex="0"
+                          role="note"
+                          aria-label="Help for export scale"
+                          data-tip="Makes each output larger before saving. Higher values can help tiny icons look cleaner, but they also increase file size."
+                          >i</span
+                        >
+                      </span>
+                      <input id="upscale" type="number" min="1" max="6" value="2" />
+                    </label>
+                    <label>
+                      <span class="field-label">
+                        Edge cleanup
+                        <span
+                          class="info-chip"
+                          tabindex="0"
+                          role="note"
+                          aria-label="Help for edge cleanup"
+                          data-tip="Removes very faint leftover transparency around edges. Increase it if exports have a dusty or hazy fringe."
+                          >i</span
+                        >
+                      </span>
+                      <input id="alphaCleanThreshold" type="number" min="0" max="255" value="2" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
-          <div class="status" id="statusText"></div>
         </aside>
 
         <div class="content">
@@ -412,10 +748,14 @@
               <div class="section-title">Original + Detection Overlay</div>
               <div class="canvas-shell" id="canvasShell">
                 <div class="placeholder" id="placeholder">
-                  Drop in a source image, then preview detections to verify bounds before exporting.
+                  Choose a source image to preview detections before exporting separate PNGs.
                 </div>
-                <img id="previewImage" hidden alt="Preview" />
-                <svg class="overlay" id="overlay"></svg>
+                <div class="preview-stage" id="previewStage" hidden>
+                  <div class="preview-frame" id="previewFrame">
+                    <img id="previewImage" hidden alt="Preview" />
+                    <svg class="overlay" id="overlay"></svg>
+                  </div>
+                </div>
               </div>
             </article>
 
@@ -431,7 +771,8 @@
 
           <section class="panel results-card">
             <div class="section-title">Split Output Preview</div>
-            <div class="results-grid" id="resultsGrid"></div>
+            <div class="results-grid" id="resultsGrid" aria-live="polite"></div>
+            <div class="results-empty" id="resultsEmpty">No exports yet. Run a split to preview each generated PNG here before downloading the zip.</div>
           </section>
         </div>
       </section>
@@ -457,15 +798,19 @@
         previewImage: document.getElementById("previewImage"),
         overlay: document.getElementById("overlay"),
         placeholder: document.getElementById("placeholder"),
+        previewStage: document.getElementById("previewStage"),
+        previewFrame: document.getElementById("previewFrame"),
         countStat: document.getElementById("countStat"),
         sizeStat: document.getElementById("sizeStat"),
         alphaStat: document.getElementById("alphaStat"),
         resultsGrid: document.getElementById("resultsGrid"),
+        resultsEmpty: document.getElementById("resultsEmpty"),
       };
 
       let currentFile = null;
       let currentImageDataUrl = "";
       let currentPreview = null;
+      let isBusy = false;
 
       function saveSettings() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(readSettings()));
@@ -503,22 +848,64 @@
         };
       }
 
-      function setStatus(message, isError = false) {
+      function setStatus(message, state = "idle") {
         elements.statusText.textContent = message;
-        elements.statusText.classList.toggle("error", isError);
+        elements.statusText.classList.toggle("error", state === "error");
+        elements.statusText.classList.toggle("busy", state === "busy");
+        elements.statusText.classList.toggle("success", state === "success");
+        elements.statusText.setAttribute("aria-live", state === "error" ? "assertive" : "polite");
+      }
+
+      function setBusy(nextBusy, actionLabel = "") {
+        isBusy = nextBusy;
+        const buttonLabel = actionLabel || "Working";
+        elements.fileInput.disabled = nextBusy;
+        elements.colorTolerance.disabled = nextBusy;
+        elements.edgeSoftness.disabled = nextBusy;
+        elements.minPixels.disabled = nextBusy;
+        elements.padding.disabled = nextBusy;
+        elements.mergeEnclosed.disabled = nextBusy;
+        elements.isolateForeground.disabled = nextBusy;
+        elements.qualityMode.disabled = nextBusy;
+        elements.upscale.disabled = nextBusy;
+        elements.alphaCleanThreshold.disabled = nextBusy;
+        elements.previewButton.disabled = nextBusy;
+        elements.splitButton.disabled = nextBusy;
+        elements.downloadLink.setAttribute("aria-disabled", nextBusy ? "true" : "false");
+        elements.previewButton.textContent = nextBusy && buttonLabel === "Previewing" ? "Previewing..." : "Preview Bounds";
+        elements.splitButton.textContent = nextBusy && buttonLabel === "Exporting" ? "Preparing Download..." : "Split And Prepare Download";
+      }
+
+      function resetSessionState() {
+        currentPreview = null;
+        elements.downloadLink.hidden = true;
+        elements.downloadLink.removeAttribute("href");
+        elements.downloadLink.removeAttribute("download");
+        elements.resultsGrid.innerHTML = "";
+        elements.resultsEmpty.hidden = false;
+        elements.overlay.innerHTML = "";
+        elements.previewStage.hidden = true;
+        elements.countStat.textContent = "0";
+        elements.sizeStat.textContent = "-";
+        elements.alphaStat.textContent = "-";
       }
 
       function drawOverlay(preview) {
         elements.overlay.innerHTML = "";
         if (!preview) return;
 
-        const bounds = elements.previewImage.getBoundingClientRect();
-        elements.overlay.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
-        elements.overlay.setAttribute("width", bounds.width);
-        elements.overlay.setAttribute("height", bounds.height);
+        const imageWidth = elements.previewImage.clientWidth;
+        const imageHeight = elements.previewImage.clientHeight;
+        if (!imageWidth || !imageHeight) {
+          return;
+        }
 
-        const xScale = bounds.width / preview.image_width;
-        const yScale = bounds.height / preview.image_height;
+        elements.overlay.setAttribute("viewBox", `0 0 ${imageWidth} ${imageHeight}`);
+        elements.overlay.setAttribute("width", imageWidth);
+        elements.overlay.setAttribute("height", imageHeight);
+
+        const xScale = imageWidth / preview.image_width;
+        const yScale = imageHeight / preview.image_height;
 
         preview.components.forEach((component, index) => {
           const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -563,9 +950,28 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await response.json();
+
+        const rawText = await response.text();
+        let data = null;
+        if (rawText) {
+          try {
+            data = JSON.parse(rawText);
+          } catch (error) {
+            const protocolHint =
+              window.location.protocol === "file:"
+                ? " Open the app through the Python web server instead of loading the HTML file directly."
+                : "";
+            throw new Error(
+              `Server returned ${response.status || "an invalid"} response instead of JSON.${protocolHint}`
+            );
+          }
+        }
+
         if (!response.ok) {
-          throw new Error(data.error || `Request failed: ${response.status}`);
+          throw new Error(data?.error || `Request failed: ${response.status}`);
+        }
+        if (!data) {
+          throw new Error("Server returned an empty response.");
         }
         return data;
       }
@@ -577,9 +983,16 @@
       }
 
       function showImage(dataUrl) {
+        elements.overlay.innerHTML = "";
+        elements.previewStage.hidden = false;
         elements.previewImage.src = dataUrl;
         elements.previewImage.hidden = false;
         elements.placeholder.hidden = true;
+      }
+
+      function requestOverlayDraw() {
+        if (!currentPreview || elements.previewImage.hidden) return;
+        requestAnimationFrame(() => drawOverlay(currentPreview));
       }
 
       function updateStats(preview) {
@@ -590,6 +1003,7 @@
 
       function renderResults(previews) {
         elements.resultsGrid.innerHTML = "";
+        elements.resultsEmpty.hidden = previews.length > 0;
         previews.forEach((item) => {
           const card = document.createElement("div");
           card.className = "thumb";
@@ -611,92 +1025,117 @@
         requireFile();
         await ensureImageData();
         saveSettings();
-        setStatus("Analyzing image and detecting components...");
-        const preview = await postJson("/api/preview", {
-          filename: currentFile.name,
-          image_data_url: currentImageDataUrl,
-          settings: readSettings(),
-        });
-        currentPreview = preview;
-        showImage(currentImageDataUrl);
-        updateStats(preview);
-        requestAnimationFrame(() => drawOverlay(preview));
-        setStatus(`Detected ${preview.component_count} component${preview.component_count === 1 ? "" : "s"}.`);
+        setBusy(true, "Previewing");
+        setStatus("Analyzing image and detecting components...", "busy");
+        try {
+          const preview = await postJson("/api/preview", {
+            filename: currentFile.name,
+            image_data_url: currentImageDataUrl,
+            settings: readSettings(),
+          });
+          currentPreview = preview;
+          showImage(currentImageDataUrl);
+          updateStats(preview);
+          if (elements.previewImage.complete && elements.previewImage.naturalWidth > 0) {
+            requestOverlayDraw();
+          }
+          setStatus(
+            `Detected ${preview.component_count} component${preview.component_count === 1 ? "" : "s"}. Review the bounds, then export when it looks right.`,
+            "success"
+          );
+        } finally {
+          setBusy(false);
+        }
       }
 
       async function runSplit() {
         requireFile();
         await ensureImageData();
         saveSettings();
-        setStatus("Rendering split outputs and preparing download...");
-        const response = await postJson("/api/split", {
-          filename: currentFile.name,
-          image_data_url: currentImageDataUrl,
-          settings: readSettings(),
-        });
-        renderResults(response.previews);
-        elements.downloadLink.href = response.download_url;
-        elements.downloadLink.download = response.download_name;
-        elements.downloadLink.hidden = false;
-        if (response.manifest) {
-          currentPreview = {
-            component_count: response.manifest.component_count,
-            image_width: currentPreview?.image_width || 0,
-            image_height: currentPreview?.image_height || 0,
-            source_has_transparency: response.manifest.source_has_transparency,
-            components: response.manifest.components,
-          };
-          if (currentPreview.image_width && currentPreview.image_height) {
-            requestAnimationFrame(() => drawOverlay(currentPreview));
+        setBusy(true, "Exporting");
+        setStatus("Rendering split outputs and preparing download...", "busy");
+        try {
+          const response = await postJson("/api/split", {
+            filename: currentFile.name,
+            image_data_url: currentImageDataUrl,
+            settings: readSettings(),
+          });
+          renderResults(response.previews);
+          elements.downloadLink.href = response.download_url;
+          elements.downloadLink.download = response.download_name;
+          elements.downloadLink.hidden = false;
+          if (response.manifest) {
+            currentPreview = {
+              component_count: response.manifest.component_count,
+              image_width: currentPreview?.image_width || 0,
+              image_height: currentPreview?.image_height || 0,
+              source_has_transparency: response.manifest.source_has_transparency,
+              components: response.manifest.components,
+            };
+            if (
+              currentPreview.image_width &&
+              currentPreview.image_height &&
+              elements.previewImage.complete &&
+              elements.previewImage.naturalWidth > 0
+            ) {
+              requestOverlayDraw();
+            }
           }
+          setStatus(
+            `Prepared ${response.manifest.component_count} PNG file${response.manifest.component_count === 1 ? "" : "s"}. Review the previews below or download the zip now.`,
+            "success"
+          );
+        } finally {
+          setBusy(false);
         }
-        setStatus(`Prepared ${response.manifest.component_count} PNG files and zip download.`);
       }
 
       elements.fileInput.addEventListener("change", async (event) => {
+        if (isBusy) return;
         currentFile = event.target.files[0] || null;
         currentImageDataUrl = "";
-        currentPreview = null;
-        elements.downloadLink.hidden = true;
-        elements.resultsGrid.innerHTML = "";
-        elements.overlay.innerHTML = "";
-        elements.countStat.textContent = "0";
-        elements.sizeStat.textContent = "-";
-        elements.alphaStat.textContent = "-";
+        resetSessionState();
         if (!currentFile) {
           elements.previewImage.hidden = true;
+          elements.previewStage.hidden = true;
           elements.placeholder.hidden = false;
-          setStatus("");
+          setStatus("Choose an image to begin.");
           return;
         }
         currentImageDataUrl = await fileToDataUrl(currentFile);
         showImage(currentImageDataUrl);
-        setStatus(`${currentFile.name} loaded. Preview bounds when ready.`);
+        setStatus(`${currentFile.name} loaded. Preview the detection bounds when you are ready.`, "success");
       });
 
       elements.previewButton.addEventListener("click", async () => {
+        if (isBusy) return;
         try {
           await runPreview();
         } catch (error) {
-          setStatus(error.message, true);
+          setStatus(error.message, "error");
         }
       });
 
       elements.splitButton.addEventListener("click", async () => {
+        if (isBusy) return;
         try {
           if (!currentPreview) {
             await runPreview();
           }
           await runSplit();
         } catch (error) {
-          setStatus(error.message, true);
+          setStatus(error.message, "error");
         }
       });
 
       window.addEventListener("resize", () => {
         if (currentPreview && !elements.previewImage.hidden) {
-          drawOverlay(currentPreview);
+          requestOverlayDraw();
         }
+      });
+
+      elements.previewImage.addEventListener("load", () => {
+        requestOverlayDraw();
       });
 
       [

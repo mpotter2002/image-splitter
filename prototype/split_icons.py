@@ -10,7 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
-from PIL import Image, ImageFilter
+try:
+    from PIL import Image, ImageFilter
+except ModuleNotFoundError as exc:
+    raise SystemExit("Missing dependency: Pillow. Install it with `python3 -m pip install pillow`.") from exc
 
 
 @dataclass
@@ -65,6 +68,15 @@ DEFAULT_SETTINGS: Dict[str, object] = {
     "padding": 2,
     "merge_enclosed": True,
     "enclosed_margin": 2,
+    "merge_small_fragments": True,
+    "small_fragment_max_pixels": 80,
+    "small_fragment_max_gap": 14,
+    "small_fragment_min_parent_ratio": 3.0,
+    "merge_thin_fragments": True,
+    "thin_fragment_max_thickness": 12,
+    "thin_fragment_min_aspect_ratio": 6.0,
+    "thin_fragment_max_gap": 28,
+    "thin_fragment_min_parent_ratio": 2.0,
     "isolate_foreground": True,
     "quality_mode": False,
     "upscale": 1,
@@ -216,6 +228,15 @@ def settings_from_args(args: argparse.Namespace) -> Dict[str, object]:
             "padding": args.padding,
             "merge_enclosed": args.merge_enclosed,
             "enclosed_margin": args.enclosed_margin,
+            "merge_small_fragments": DEFAULT_SETTINGS["merge_small_fragments"],
+            "small_fragment_max_pixels": DEFAULT_SETTINGS["small_fragment_max_pixels"],
+            "small_fragment_max_gap": DEFAULT_SETTINGS["small_fragment_max_gap"],
+            "small_fragment_min_parent_ratio": DEFAULT_SETTINGS["small_fragment_min_parent_ratio"],
+            "merge_thin_fragments": DEFAULT_SETTINGS["merge_thin_fragments"],
+            "thin_fragment_max_thickness": DEFAULT_SETTINGS["thin_fragment_max_thickness"],
+            "thin_fragment_min_aspect_ratio": DEFAULT_SETTINGS["thin_fragment_min_aspect_ratio"],
+            "thin_fragment_max_gap": DEFAULT_SETTINGS["thin_fragment_max_gap"],
+            "thin_fragment_min_parent_ratio": DEFAULT_SETTINGS["thin_fragment_min_parent_ratio"],
             "isolate_foreground": args.isolate_foreground,
             "quality_mode": args.quality_mode,
             "upscale": args.upscale,
@@ -242,6 +263,15 @@ def normalize_settings(overrides: Dict[str, object] | None = None) -> Dict[str, 
     settings["padding"] = max(0, int(settings["padding"]))
     settings["merge_enclosed"] = bool(settings["merge_enclosed"])
     settings["enclosed_margin"] = max(0, int(settings["enclosed_margin"]))
+    settings["merge_small_fragments"] = bool(settings["merge_small_fragments"])
+    settings["small_fragment_max_pixels"] = max(1, int(settings["small_fragment_max_pixels"]))
+    settings["small_fragment_max_gap"] = max(0, int(settings["small_fragment_max_gap"]))
+    settings["small_fragment_min_parent_ratio"] = max(1.0, float(settings["small_fragment_min_parent_ratio"]))
+    settings["merge_thin_fragments"] = bool(settings["merge_thin_fragments"])
+    settings["thin_fragment_max_thickness"] = max(1, int(settings["thin_fragment_max_thickness"]))
+    settings["thin_fragment_min_aspect_ratio"] = max(1.0, float(settings["thin_fragment_min_aspect_ratio"]))
+    settings["thin_fragment_max_gap"] = max(0, int(settings["thin_fragment_max_gap"]))
+    settings["thin_fragment_min_parent_ratio"] = max(1.0, float(settings["thin_fragment_min_parent_ratio"]))
     settings["isolate_foreground"] = bool(settings["isolate_foreground"])
     settings["quality_mode"] = bool(settings["quality_mode"])
     settings["upscale"] = max(1, int(settings["upscale"]))
@@ -448,6 +478,114 @@ def merge_enclosed_components(components: List[Component], margin: int) -> List[
     return sort_components([merge_components(group) for group in groups.values()])
 
 
+def bbox_gap(left: Component, right: Component) -> float:
+    dx = max(left.x_min - right.x_max - 1, right.x_min - left.x_max - 1, 0)
+    dy = max(left.y_min - right.y_max - 1, right.y_min - left.y_max - 1, 0)
+    return math.sqrt(dx * dx + dy * dy)
+
+
+def merge_small_fragments(
+    components: List[Component],
+    *,
+    max_pixels: int,
+    max_gap: int,
+    min_parent_ratio: float,
+) -> List[Component]:
+    if len(components) <= 1:
+        return components
+
+    working = list(components)
+    removed: set[int] = set()
+
+    for index, component in enumerate(working):
+        if index in removed:
+            continue
+
+        if component.pixel_count > max_pixels:
+            continue
+
+        best_target_index = None
+        best_gap = None
+
+        for candidate_index, candidate in enumerate(working):
+            if candidate_index == index or candidate_index in removed:
+                continue
+            if candidate.pixel_count < component.pixel_count * min_parent_ratio:
+                continue
+
+            gap = bbox_gap(component, candidate)
+            if gap > max_gap:
+                continue
+            if best_gap is None or gap < best_gap:
+                best_gap = gap
+                best_target_index = candidate_index
+
+        if best_target_index is None:
+            continue
+
+        working[best_target_index] = merge_components([component, working[best_target_index]])
+        removed.add(index)
+
+    return sort_components([component for index, component in enumerate(working) if index not in removed])
+
+
+def is_thin_fragment(component: Component, *, max_thickness: int, min_aspect_ratio: float) -> bool:
+    thickness = min(component.width, component.height)
+    length = max(component.width, component.height)
+    if thickness > max_thickness:
+        return False
+    return (length / max(1, thickness)) >= min_aspect_ratio
+
+
+def merge_thin_fragments(
+    components: List[Component],
+    *,
+    max_thickness: int,
+    min_aspect_ratio: float,
+    max_gap: int,
+    min_parent_ratio: float,
+) -> List[Component]:
+    if len(components) <= 1:
+        return components
+
+    working = list(components)
+    removed: set[int] = set()
+
+    for index, component in enumerate(working):
+        if index in removed:
+            continue
+        if not is_thin_fragment(
+            component,
+            max_thickness=max_thickness,
+            min_aspect_ratio=min_aspect_ratio,
+        ):
+            continue
+
+        best_target_index = None
+        best_gap = None
+
+        for candidate_index, candidate in enumerate(working):
+            if candidate_index == index or candidate_index in removed:
+                continue
+            if candidate.pixel_count < component.pixel_count * min_parent_ratio:
+                continue
+
+            gap = bbox_gap(component, candidate)
+            if gap > max_gap:
+                continue
+            if best_gap is None or gap < best_gap:
+                best_gap = gap
+                best_target_index = candidate_index
+
+        if best_target_index is None:
+            continue
+
+        working[best_target_index] = merge_components([component, working[best_target_index]])
+        removed.add(index)
+
+    return sort_components([component for index, component in enumerate(working) if index not in removed])
+
+
 def trim_transparent_edges(image: Image.Image, alpha_threshold: int) -> Image.Image:
     alpha = image.getchannel("A")
     mask = alpha.point(lambda value: 255 if value > alpha_threshold else 0)
@@ -593,6 +731,21 @@ def analyze_image(image: Image.Image, settings: Dict[str, object] | None = None)
     components = [component for component in components if component.pixel_count >= int(normalized["min_pixels"])]
     if bool(normalized["merge_enclosed"]):
         components = merge_enclosed_components(components, margin=int(normalized["enclosed_margin"]))
+    if bool(normalized["merge_small_fragments"]):
+        components = merge_small_fragments(
+            components,
+            max_pixels=int(normalized["small_fragment_max_pixels"]),
+            max_gap=int(normalized["small_fragment_max_gap"]),
+            min_parent_ratio=float(normalized["small_fragment_min_parent_ratio"]),
+        )
+    if bool(normalized["merge_thin_fragments"]):
+        components = merge_thin_fragments(
+            components,
+            max_thickness=int(normalized["thin_fragment_max_thickness"]),
+            min_aspect_ratio=float(normalized["thin_fragment_min_aspect_ratio"]),
+            max_gap=int(normalized["thin_fragment_max_gap"]),
+            min_parent_ratio=float(normalized["thin_fragment_min_parent_ratio"]),
+        )
     components = [component.padded(width, height, int(normalized["padding"])) for component in components]
     components = sort_components(components)
 

@@ -1,12 +1,12 @@
-# Prototype: Image Icon Splitter
+# Image Icon Splitter
 
-This prototype splits disconnected objects in one image into separate PNG files.
-It now supports both a CLI workflow and a small local browser MVP.
+Split disconnected objects in one image into separate PNG files.
+The project includes both a CLI workflow and a local browser app.
 
 ## Requirements
 
 - Python 3
-- Pillow (`pip install pillow`)
+- Install dependencies with `python3 -m pip install -r requirements.txt`
 
 ## Quick run
 
@@ -71,12 +71,12 @@ Manual quality controls:
 - `--alpha-clean-threshold 3`
 - `--unsharp --unsharp-radius 1.2 --unsharp-percent 160 --unsharp-threshold 2`
 
-## MVP limits
+## Current limits
 
 - If two icons touch, they become one component.
 - Complex textured backgrounds may require preprocessing.
 
-## Browser MVP
+## Browser app
 
 Run the local web app:
 
@@ -95,6 +95,50 @@ Browser flow currently supports:
 - preview generated crops
 - download a zip containing PNGs + manifest
 - persist last-used settings in local storage
+
+### Tests
+
+Run the automated server tests:
+
+`python3 -m unittest test_web_app.py`
+
+### Runtime safeguards
+
+The web app now includes basic public-instance guardrails:
+
+- upload size limit via `IMAGE_SPLITTER_MAX_UPLOAD_BYTES` (default `12 MB`)
+- request body limit via `IMAGE_SPLITTER_MAX_REQUEST_BYTES` (default `18 MB`)
+- capped temporary download retention via `IMAGE_SPLITTER_MAX_STORED_DOWNLOADS` (default `24`)
+- temporary zip downloads stored outside process memory
+- user-safe error messages for invalid uploads instead of raw exceptions
+
+Health check:
+
+`GET /healthz`
+
+### Docker deploy
+
+Build:
+
+`docker build -t image-splitter .`
+
+Run:
+
+`docker run --rm -p 8008:8008 image-splitter`
+
+The container starts:
+
+`python web_app.py --host 0.0.0.0 --port 8008`
+
+### Vercel preview deploy
+
+This folder now includes a Vercel Python entrypoint in [api/index.py](/Users/michaelpotter/ClaudeCowork/projects/image-splitter/prototype/api/index.py) and routing in [vercel.json](/Users/michaelpotter/ClaudeCowork/projects/image-splitter/prototype/vercel.json).
+
+From this directory, deploy a preview with:
+
+`vercel deploy . -y`
+
+If the Vercel CLI is unavailable, use the Codex Vercel deploy skill fallback script.
 
 ## Recorded test evidence
 
