@@ -35,6 +35,8 @@ ALLOWED_IMAGE_MIME_TYPES = {
     "image/jpeg",
     "image/webp",
     "image/gif",
+    "image/heic",
+    "image/heif",
 }
 DOWNLOADS: "OrderedDict[str, dict[str, object]]" = OrderedDict()
 
@@ -48,17 +50,17 @@ class RequestError(Exception):
 
 def decode_data_url(data_url: str) -> bytes:
     if "," not in data_url or not data_url.startswith("data:"):
-        raise RequestError("Upload a valid PNG, JPG, WebP, or GIF image.")
+        raise RequestError("Upload a valid PNG, JPG, HEIC, WebP, or GIF image.")
 
     header, encoded = data_url.split(",", 1)
     mime_type = header[5:].split(";", 1)[0].lower()
     if mime_type not in ALLOWED_IMAGE_MIME_TYPES:
-        raise RequestError("Only PNG, JPG, WebP, and GIF files are supported.")
+        raise RequestError("Only PNG, JPG, HEIC, WebP, and GIF files are supported.")
 
     try:
         decoded = base64.b64decode(encoded, validate=True)
     except (ValueError, binascii.Error) as exc:
-        raise RequestError("Upload a valid PNG, JPG, WebP, or GIF image.") from exc
+        raise RequestError("Upload a valid PNG, JPG, HEIC, WebP, or GIF image.") from exc
 
     if len(decoded) > MAX_UPLOAD_BYTES:
         raise RequestError(
@@ -78,7 +80,7 @@ def public_error_message(exc: Exception) -> str:
 
     message = str(exc).lower()
     if "cannot identify image file" in message:
-        return "Upload a valid PNG, JPG, WebP, or GIF image."
+        return "Upload a valid PNG, JPG, HEIC, WebP, or GIF image."
     if "decompressed data too large" in message:
         return "Image is too complex to process safely. Try a smaller file."
     return "Something went wrong while processing the image. Please try a different file or adjust the settings."

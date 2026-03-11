@@ -89,7 +89,13 @@ class WebAppServerTests(unittest.TestCase):
         }
         status, payload = self.request_json("/api/preview", bad_payload)
         self.assertEqual(status, 400)
-        self.assertEqual(payload["error"], "Upload a valid PNG, JPG, WebP, or GIF image.")
+        self.assertEqual(payload["error"], "Upload a valid PNG, JPG, HEIC, WebP, or GIF image.")
+
+    def test_heic_mime_type_is_accepted_by_upload_decoder(self) -> None:
+        decoded = web_app.decode_data_url(
+            "data:image/heic;base64," + base64.b64encode(b"heic-bytes").decode("ascii")
+        )
+        self.assertEqual(decoded, b"heic-bytes")
 
 
 if __name__ == "__main__":

@@ -15,6 +15,14 @@ try:
 except ModuleNotFoundError as exc:
     raise SystemExit("Missing dependency: Pillow. Install it with `python3 -m pip install pillow`.") from exc
 
+try:
+    from pillow_heif import register_heif_opener
+except ModuleNotFoundError:
+    register_heif_opener = None
+
+if register_heif_opener is not None:
+    register_heif_opener()
+
 
 @dataclass
 class Component:

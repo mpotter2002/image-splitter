@@ -31,18 +31,30 @@
         box-sizing: border-box;
       }
 
+      html {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overscroll-behavior-x: none;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
         font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
         color: var(--ink);
         background: var(--bg);
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
       }
 
       main {
         width: 100%;
+        max-width: 100%;
         margin: 42px 0 72px;
         padding: 0 50px;
+        overflow-x: hidden;
       }
 
       .hero {
@@ -102,6 +114,8 @@
         border: 1px solid var(--outline);
         border-radius: 24px;
         box-shadow: var(--shadow);
+        min-width: 0;
+        max-width: 100%;
       }
 
       .controls {
@@ -110,6 +124,8 @@
         grid-template-columns: minmax(250px, 1.1fr) minmax(360px, 1.5fr) minmax(240px, 0.95fr);
         gap: 16px;
         align-items: start;
+        min-width: 0;
+        max-width: 100%;
       }
 
       .section {
@@ -150,6 +166,7 @@
       input[type="file"],
       input[type="number"] {
         width: 100%;
+        max-width: 100%;
         border: 1px solid var(--outline);
         border-radius: 14px;
         padding: 11px 12px;
@@ -168,6 +185,8 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        width: 100%;
+        max-width: 100%;
         padding: 9px 12px;
         border-radius: 14px;
         border: 1px solid var(--outline);
@@ -362,12 +381,14 @@
       .content {
         display: grid;
         gap: 24px;
+        min-width: 0;
       }
 
       .viewer {
         display: grid;
         grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
         gap: 24px;
+        min-width: 0;
       }
 
       .canvas-card,
@@ -522,7 +543,7 @@
 
       @media (max-width: 980px) {
         main {
-          padding: 0 20px;
+          padding: 0 14px;
         }
 
         .hero,
@@ -532,6 +553,7 @@
 
         .controls {
           grid-template-columns: 1fr;
+          padding: 18px;
         }
 
         .advanced-grid {
@@ -540,6 +562,10 @@
 
         .hero-copy {
           justify-items: start;
+        }
+
+        .preview-stage {
+          inset: 14px;
         }
       }
     </style>
@@ -561,10 +587,10 @@
         <aside class="panel controls">
           <div class="section input-section">
             <div class="section-title">Input</div>
-            <p class="section-intro">Choose a PNG, JPG, WebP, or GIF. Best results come from images where each icon is visually separated from the others.</p>
+            <p class="section-intro">Choose a PNG, JPG, HEIC, WebP, or GIF. Best results come from images where each icon is visually separated from the others.</p>
             <label>
               Image file
-              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/heic,image/heif,image/webp,image/gif,.heic,.heif" />
             </label>
             <p class="helper-text">Uploads are limited to 12 MB per image.</p>
           </div>
