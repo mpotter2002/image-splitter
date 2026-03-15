@@ -839,6 +839,9 @@
       let currentImageDataUrl = "";
       let currentPreview = null;
       let isBusy = false;
+      let currentBusyAction = "";
+      let lastPreviewSettingsKey = "";
+      let lastSplitSettingsKey = "";
 
       function saveSettings() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(readSettings()));
@@ -876,6 +879,44 @@
         };
       }
 
+      function previewSettingsSignature() {
+        const settings = readSettings();
+        return JSON.stringify({
+          color_tolerance: settings.color_tolerance,
+          edge_softness: settings.edge_softness,
+          min_pixels: settings.min_pixels,
+          padding: settings.padding,
+          merge_enclosed: settings.merge_enclosed,
+        });
+      }
+
+      function splitSettingsSignature() {
+        return JSON.stringify(readSettings());
+      }
+
+      function isPreviewStale() {
+        return Boolean(currentPreview && lastPreviewSettingsKey && lastPreviewSettingsKey !== previewSettingsSignature());
+      }
+
+      function isSplitStale() {
+        return Boolean(lastSplitSettingsKey && lastSplitSettingsKey !== splitSettingsSignature());
+      }
+
+      function updateActionLabels() {
+        if (isBusy) {
+          elements.previewButton.textContent =
+            currentBusyAction === "Previewing" ? "Previewing..." : "Preview Bounds";
+          elements.splitButton.textContent =
+            currentBusyAction === "Exporting" ? "Preparing Download..." : "Split And Prepare Download";
+          return;
+        }
+
+        elements.previewButton.textContent = isPreviewStale() ? "Rerun Preview Bounds" : "Preview Bounds";
+        elements.splitButton.textContent = isSplitStale()
+          ? "Rerun Split And Prepare Download"
+          : "Split And Prepare Download";
+      }
+
       function setStatus(message, state = "idle") {
         elements.statusText.textContent = message;
         elements.statusText.classList.toggle("error", state === "error");
@@ -886,7 +927,7 @@
 
       function setBusy(nextBusy, actionLabel = "") {
         isBusy = nextBusy;
-        const buttonLabel = actionLabel || "Working";
+        currentBusyAction = nextBusy ? actionLabel || "Working" : "";
         elements.fileInput.disabled = nextBusy;
         elements.colorTolerance.disabled = nextBusy;
         elements.edgeSoftness.disabled = nextBusy;
@@ -900,15 +941,20 @@
         elements.previewButton.disabled = nextBusy;
         elements.splitButton.disabled = nextBusy;
         elements.downloadLink.setAttribute("aria-disabled", nextBusy ? "true" : "false");
-        elements.previewButton.textContent = nextBusy && buttonLabel === "Previewing" ? "Previewing..." : "Preview Bounds";
-        elements.splitButton.textContent = nextBusy && buttonLabel === "Exporting" ? "Preparing Download..." : "Split And Prepare Download";
+        updateActionLabels();
+      }
+
+      function invalidatePreparedDownload() {
+        elements.downloadLink.hidden = true;
+        elements.downloadLink.removeAttribute("href");
+        elements.downloadLink.removeAttribute("download");
       }
 
       function resetSessionState() {
         currentPreview = null;
-        elements.downloadLink.hidden = true;
-        elements.downloadLink.removeAttribute("href");
-        elements.downloadLink.removeAttribute("download");
+        lastPreviewSettingsKey = "";
+        lastSplitSettingsKey = "";
+        invalidatePreparedDownload();
         elements.resultsGrid.innerHTML = "";
         elements.resultsEmpty.hidden = false;
         elements.overlay.innerHTML = "";
@@ -916,6 +962,7 @@
         elements.countStat.textContent = "0";
         elements.sizeStat.textContent = "-";
         elements.alphaStat.textContent = "-";
+        updateActionLabels();
       }
 
       function drawOverlay(preview) {
@@ -1062,6 +1109,7 @@
             settings: readSettings(),
           });
           currentPreview = preview;
+          lastPreviewSettingsKey = previewSettingsSignature();
           showImage(currentImageDataUrl);
           updateStats(preview);
           if (elements.previewImage.complete && elements.previewImage.naturalWidth > 0) {
@@ -1088,6 +1136,7 @@
             image_data_url: currentImageDataUrl,
             settings: readSettings(),
           });
+          lastSplitSettingsKey = splitSettingsSignature();
           renderResults(response.previews);
           elements.downloadLink.href = response.download_url;
           elements.downloadLink.download = response.download_name;
@@ -1147,7 +1196,7 @@
       elements.splitButton.addEventListener("click", async () => {
         if (isBusy) return;
         try {
-          if (!currentPreview) {
+          if (!currentPreview || isPreviewStale()) {
             await runPreview();
           }
           await runSplit();
@@ -1177,10 +1226,27 @@
         elements.upscale,
         elements.alphaCleanThreshold,
       ].forEach((input) => {
-        input.addEventListener("change", saveSettings);
+        input.addEventListener("change", () => {
+          saveSettings();
+
+          if (!currentFile || isBusy) {
+            updateActionLabels();
+            return;
+          }
+
+          if (isSplitStale()) {
+            invalidatePreparedDownload();
+            setStatus("Settings changed after the last export. Run the split again to prepare a fresh download.", "idle");
+          } else if (isPreviewStale()) {
+            setStatus("Detection settings changed. Preview the bounds again to refresh the overlay.", "idle");
+          }
+
+          updateActionLabels();
+        });
       });
 
       loadSettings();
+      updateActionLabels();
     </script>
   </body>
 </html>
