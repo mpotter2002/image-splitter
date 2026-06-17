@@ -397,9 +397,8 @@
       }
 
       .canvas-shell {
-        position: relative;
         border-radius: 20px;
-        overflow: hidden;
+        overflow: auto;
         background: #161616;
         border: 1px solid var(--outline);
         min-height: 360px;
@@ -409,10 +408,10 @@
       }
 
       .preview-stage {
-        position: absolute;
-        inset: 18px;
         display: grid;
         place-items: center;
+        width: 100%;
+        min-width: 0;
       }
 
       .preview-frame {
@@ -424,8 +423,9 @@
 
       .canvas-shell img {
         display: block;
-        max-width: min(100%, 1000px);
-        max-height: 68vh;
+        width: auto;
+        height: auto;
+        max-width: 100%;
       }
 
       .overlay {
@@ -565,7 +565,7 @@
         }
 
         .preview-stage {
-          inset: 14px;
+          width: 100%;
         }
       }
     </style>
